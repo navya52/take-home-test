@@ -1,13 +1,16 @@
 # take-home-test
 
 At Healthtech-1, one of our core responsibilities is to ingest registration forms, transform them, update some external systems and get them ready for future processing (by the FORM-BOT).
+We are sent these forms by a particularly unreliable 3rd party - we should expect them to make schema changes without informing us, send duplicate forms, or generally just be badly behaved!
+As this is important healthcare data, we need to design our systems to be resilient to these kinds of errors.
 
-Your task is to code the "/ingest" endpoint. This endpoint takes a form from an external system and needs to:
-- Check the form conforms to the schema we've agreed with the external provider. This schema is found in ingested_schema.ts but unfortunately the data source isn't 100% reliable and schema changes aren't always communicated in a timely fashion
-- Call a geocoding API and transform the postcode into a longitude and latitude so that we have specific address information for the FORM-BOT. A mock implementation of this API ("ideal postcodes") is provided.
-- Try to transform the form into the schema found in transformed_schema.ts
-- If the transform is successful, the form then needs adding to a database (you are free to pick the technology here) ready for the FORM-BOT
-- If transform is unsuccessful, proprose a process by which we can edit our code and handle this form post a coding change
+Your task is to code a system for ingesting and processing these forms. For a form to become ready for our bots, it will need to:
+- Be ingested into a database (via an `/ingest` endpoint). 
+- Conform to the schema we've currently agreed with the external provider. This schema is found in `ingested_schema.ts` (but unfortunately the data source isn't 100% reliable and schema changes aren't always communicated in a timely fashion!)
+- Have a longitude and latitude so that we have specific address information for the FORM-BOT. A mock implementation of a geocoding API (to transform the postcode into lat/long) is provided.
+- Be transformed into the schema found in `transformed_schema.ts`.
+
+In addition to this, if the transformation/another step is unsuccessful, we'd ideally like to be able to capture the error/data, ship a code change and then handle this form once that change has been deployed (e.g some kind of `/retry` endpoint)
 
 Some additional notes on the system
 - The third party external provider does not guarantee exactly once delivery
@@ -16,6 +19,7 @@ Some additional notes on the system
 
 Some notes on this take home
 - We expect you to add some basic tests to your code
+- We expect you to use an actual database, as we'd like to see your schema design
 - You can use AI to aid you in this task but please do not just ask Claude to do the whole thing for you
 - You are free to pick another server technology (e.g. NestJS) if you wish and even pick another language though please check with us first on language.
 
