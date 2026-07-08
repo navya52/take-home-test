@@ -24,4 +24,4 @@ Some notes on this take home
 - You are free to pick another server technology (e.g. NestJS) if you wish and even pick another language though please check with us first on language.
 
 How to submit
-- Please send an email to laurence@healthtech1.uk with a link to your repository and a link to a 5 minute (max) [loom](https://www.loom.com) which explains your code and some of your design decisions
+- Please send an email to jonny@healthtech1.uk and andy@healthtech1.uk with a link to your repository and a link to a 5 minute (max) [loom](https://www.loom.com) which explains your code and some of your design decisions
