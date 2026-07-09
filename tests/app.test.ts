@@ -1,6 +1,7 @@
 import request from "supertest";
 import app from "../src/app";
 import {
+	ProcessingTimeoutError,
 	closeDb,
 	getDb,
 	getFormBySessionId,
@@ -238,10 +239,11 @@ describe("waitUntilProcessed", () => {
 		expect(row.status).toBe("ready");
 	});
 
-	it("returns received row if timeout hits before processing finishes", async () => {
+	it("throws if timeout hits before processing finishes", async () => {
 		insertReceived(personOne.session_id, personOne.application_reference, personOne);
 
-		const row = await waitUntilProcessed(personOne.session_id, 150);
-		expect(row.status).toBe("received");
+		await expect(waitUntilProcessed(personOne.session_id, 150)).rejects.toBeInstanceOf(
+			ProcessingTimeoutError
+		);
 	});
 });

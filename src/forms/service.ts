@@ -3,6 +3,7 @@ import {
 	FormStatus,
 	deliverNextReadyForm,
 	getFormBySessionId,
+	ProcessingTimeoutError,
 	insertReceived,
 	resetEmailAttempts,
 	updateProcessingResult,
@@ -68,8 +69,15 @@ export async function ingestForm(rawPayload: unknown): Promise<FormResponse> {
 
 	const inserted = insertReceived(body.session_id, applicationReference, rawPayload);
 	if (inserted === "conflict") {
-		const existing = await waitUntilProcessed(body.session_id);
-		return toFormResponse(existing);
+		try {
+			const existing = await waitUntilProcessed(body.session_id);
+			return toFormResponse(existing);
+		} catch (err) {
+			if (err instanceof ProcessingTimeoutError) {
+				throw new HttpError(504, err.message);
+			}
+			throw err;
+		}
 	}
 
 	const result = await processForm(rawPayload);

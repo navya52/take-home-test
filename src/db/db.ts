@@ -199,6 +199,13 @@ function sleep(ms: number): Promise<void> {
 	return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+export class ProcessingTimeoutError extends Error {
+	constructor(sessionId: string) {
+		super(`processing still in progress for session_id ${sessionId}, retry ingest`);
+		this.name = "ProcessingTimeoutError";
+	}
+}
+
 export async function waitUntilProcessed(
 	sessionId: string,
 	timeoutMs: number = DEFAULT_WAIT_TIMEOUT_MS
@@ -219,6 +226,9 @@ export async function waitUntilProcessed(
 	const row = getFormBySessionId(sessionId);
 	if (!row) {
 		throw new Error(`No form found for session_id ${sessionId}`);
+	}
+	if (row.status === "received") {
+		throw new ProcessingTimeoutError(sessionId);
 	}
 	return row;
 }
