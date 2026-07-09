@@ -126,6 +126,48 @@ describe("API integration", () => {
 		expect(response.status).toBe(400);
 	});
 
+	it("fails validation via ingest and keeps raw for retry after fix", async () => {
+		const { mobile_number: _, ...bad } = personOne;
+		const failed = await request(app).post("/ingest").send(bad);
+		expect(failed.body.status).toBe("failed");
+		expect(failed.body.error).toContain("mobile_number");
+		expect(failed.body.raw_payload.session_id).toBe(personOne.session_id);
+
+		getDb()
+			.prepare(`UPDATE forms SET raw_payload = ? WHERE session_id = ?`)
+			.run(JSON.stringify(personOne), personOne.session_id);
+
+		const retried = await request(app).post("/retry").send({ session_id: personOne.session_id });
+		expect(retried.body.status).toBe("ready");
+		expect(retried.body.transformed.firstName).toBe("John");
+	});
+
+	it("concurrent duplicate ingest waits for winner without reprocessing", async () => {
+		lookupPostcode.mockImplementation(
+			() =>
+				new Promise((resolve) =>
+					setTimeout(
+						() => resolve({ statusCode: 200, body: { longitude: 50.05, latitude: -5.05 } }),
+						300
+					)
+				)
+		);
+
+		const first = request(app).post("/ingest").send(personOne);
+		await new Promise((resolve) => setTimeout(resolve, 50));
+		const second = request(app)
+			.post("/ingest")
+			.send({ ...personOne, name: "Different Person" });
+
+		const [firstRes, secondRes] = await Promise.all([first, second]);
+
+		expect(firstRes.body.id).toBe(secondRes.body.id);
+		expect(firstRes.body.status).toBe("ready");
+		expect(secondRes.body.status).toBe("ready");
+		expect(secondRes.body.transformed.firstName).toBe("John");
+		expect(lookupPostcode).toHaveBeenCalledTimes(1);
+	});
+
 	it("POST /bot/next returns oldest ready form and marks delivered", async () => {
 		await request(app).post("/ingest").send(personOne);
 		await request(app).post("/ingest").send(personTwo);
@@ -194,5 +236,12 @@ describe("waitUntilProcessed", () => {
 
 		const row = await waitUntilProcessed(personOne.session_id, 5000);
 		expect(row.status).toBe("ready");
+	});
+
+	it("returns received row if timeout hits before processing finishes", async () => {
+		insertReceived(personOne.session_id, personOne.application_reference, personOne);
+
+		const row = await waitUntilProcessed(personOne.session_id, 150);
+		expect(row.status).toBe("received");
 	});
 });
